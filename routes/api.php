@@ -6,7 +6,6 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\TipController;
 
-Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 
 Route::middleware('auth:api')->group(function () {

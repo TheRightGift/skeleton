@@ -1,18 +1,24 @@
 <?php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TipController;
+use App\Http\Controllers\LoginController;
+use App\Http\Controllers\LogoutController;
+use App\Http\Controllers\DashboardController;
 
 Route::get('/', function () {
-    return view('landing');
-})->name('landing');
+    return view('welcome');
+});
 
-Route::get('/login', function () {
-    return view('auth.login');
-})->name('login');
+Route::prefix(('auth'))->group(function () {
+    Route::post('login', [LoginController::class, 'login']);
+    Route::post('/logout', [LogoutController::class, 'logout'])->name('logout');
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->name('dashboard')->middleware('auth');
+    Route::middleware('guest')->group(function () {
+        Route::get('/login', [LoginController::class, 'showLogin'])->name('login');
+    });
+});
 
-Route::get('/logout', [\App\Http\Controllers\Auth\AuthController::class, 'logout'])->name('logout');
-Route::get('/t/{key}', [TipController::class, 'showTippingPage'])->name('tipping.page');
+// Protected routes
+Route::middleware('auth')->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+});Route::get('/t/{key}', [TipController::class, 'showTippingPage'])->name('tipping.page');

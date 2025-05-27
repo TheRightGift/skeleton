@@ -1,9 +1,5 @@
 @extends('layouts.app')
-@section('title')
-    Sign In to {{ config('app.name') }}
-@stop
+@section('title', 'Login to Tippaz')
 @section('content')
     <login-component></login-component>
-@stop
-@section('script')
-@stop
+@endsection

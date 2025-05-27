@@ -4,17 +4,10 @@ namespace App\Http\Controllers;
 use App\Models\Wallet;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Unicodeveloper\Paystack\Paystack;
+use Unicodeveloper\Paystack\Facades\Paystack;
 
 class TipController extends Controller
 {
-    protected $paystack;
-
-    public function __construct()
-    {
-        $this->paystack = new Paystack();
-    }
-
     public function showTippingPage($key)
     {
         $wallet = Wallet::where('tipping_url', config('app.url') . '/t/' . $key)->first();
@@ -47,37 +40,60 @@ class TipController extends Controller
         }
 
         try {
-            $payment = $this->paystack->charge([
-                'amount' => $request->amount * 100,
+            $paymentData = [
+                'amount' => $request->amount * 100, // Convert to kobo
                 'email' => $request->email,
-                'bank' => [
-                    'account_number' => $request->account_number,
-                    'bank_code' => $request->bank_code,
-                ],
+                'currency' => 'NGN',
+                'channels' => ['bank', 'ussd', 'qr'],
                 'metadata' => [
                     'wallet_id' => $wallet->id,
                     'tipping_url' => $wallet->tipping_url,
+                    'custom_fields' => [
+                        [
+                            'display_name' => 'Tip for',
+                            'variable_name' => 'tip_recipient',
+                            'value' => $wallet->user->name
+                        ]
+                    ]
+                ]
+            ];
+
+            // Use direct API call matching the docs example
+            $secretKey = env('PAYSTACK_SECRET_KEY');
+
+            $client = new \GuzzleHttp\Client();
+            $response = $client->request('POST', 'https://api.paystack.co/transaction/initialize', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $secretKey,
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
                 ],
+                'json' => $paymentData
             ]);
 
-            if ($payment['data']['status'] === 'send_otp') {
+            $result = json_decode($response->getBody(), true);
+
+            if ($result && isset($result['status']) && $result['status']) {
                 return response()->json([
-                    'message' => 'OTP required',
-                    'reference' => $payment['data']['reference'],
+                    'message' => 'Payment initialized',
+                    'authorization_url' => $result['data']['authorization_url'],
+                    'access_code' => $result['data']['access_code'],
+                    'reference' => $result['data']['reference']
                 ]);
             }
 
-            return response()->json(['message' => 'Payment initiated', 'reference' => $payment['data']['reference']]);
+            return response()->json(['message' => 'Payment initialization failed'], 400);
         } catch (\Exception $e) {
+            // Add logging for troubleshooting
+            \Illuminate\Support\Facades\Log::error('Paystack error: ' . $e->getMessage());
             return response()->json(['message' => 'Payment failed: ' . $e->getMessage()], 400);
         }
     }
 
-    public function verifyOtp(Request $request, $key)
+    public function verifyPayment(Request $request, $key)
     {
         $request->validate([
             'reference' => 'required|string',
-            'otp' => 'required|string',
         ]);
 
         $wallet = Wallet::where('tipping_url', config('app.url') . '/t/' . $key)->first();
@@ -86,26 +102,22 @@ class TipController extends Controller
         }
 
         try {
-            $payment = $this->paystack->charge([
-                'reference' => $request->reference,
-                'otp' => $request->otp,
-            ]);
+            // Verify the payment
+            $payment = Paystack::getPaymentData();
 
             if ($payment['data']['status'] === 'success') {
-                $amount = $payment['data']['amount'] / 100;
+                $amount = $payment['data']['amount'] / 100; // Convert from kobo
                 $wallet->balance += $amount;
                 $wallet->save();
 
+                // Create transaction record
                 \App\Models\Transaction::create([
                     'wallet_id' => $wallet->id,
                     'amount' => $amount,
-                    'type' => 'deposit',
+                    'type' => 'tip',
                     'status' => 'completed',
-                    'qr_code_key' => \Illuminate\Support\Str::random(32),
+                    'qr_code_key' => $payment['data']['reference'],
                 ]);
-
-                $wallet->tipping_url = config('app.url') . '/t/' . \Illuminate\Support\Str::random(32);
-                $wallet->save();
 
                 return response()->json(['message' => 'Tip processed successfully']);
             }

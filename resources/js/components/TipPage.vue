@@ -86,7 +86,7 @@ export default {
     props: {
         user: Object,
         tipping_url: String,
-        key: String
+        keyering: String
     },
     data() {
         return {
@@ -112,7 +112,7 @@ export default {
             }).catch(err => this.showToast('Failed to load banks'));
         },
         initiateTip() {
-            axios.post(`/api/tip/${this.key}`, {
+            axios.post(`/api/tip/${this.keyering}`, {
                 email: this.form.email,
                 amount: this.form.amount,
                 account_number: this.form.account_number,
@@ -128,7 +128,7 @@ export default {
             }).catch(err => this.showToast(err.response?.data?.message || 'Failed to initiate tip'));
         },
         verifyOtp() {
-            axios.post(`/api/tip/${this.key}/verify`, {
+            axios.post(`/api/tip/${this.keyering}/verify`, {
                 reference: this.form.reference,
                 otp: this.form.otp
             }).then(() => {

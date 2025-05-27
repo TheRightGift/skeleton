@@ -6,10 +6,9 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\TipController;
 
-Route::post('/register', [AuthController::class, 'register']);
+// Route::post('/register', [AuthController::class, 'register']);
 
-Route::middleware('auth:api')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
+Route::middleware('auth:sanctum')->group(function () {
     Route::post('/2fa/enable', [TwoFactorController::class, 'enable']);
     Route::post('/2fa/verify', [TwoFactorController::class, 'verify']);
     Route::post('/2fa/disable', [TwoFactorController::class, 'disable']);

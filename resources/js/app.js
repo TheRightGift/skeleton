@@ -17,7 +17,7 @@ import { defineAsyncComponent } from "vue";
 const app = createApp({});
 
 
-app.component('landing-component', defineAsyncComponent(() => import('./components/Landing.vue')));
+app.component('home-component', defineAsyncComponent(() => import('./components/HomeComponent.vue')));
 app.component('login-component', defineAsyncComponent(() => import('./components/auth/Login.vue')));
 app.component('dashboard-component', defineAsyncComponent(() => import('./components/Dashboard.vue')));
 app.component('tip-component', defineAsyncComponent(() => import('./components/TipPage.vue')));

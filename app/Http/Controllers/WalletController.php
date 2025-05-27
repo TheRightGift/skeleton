@@ -4,21 +4,101 @@ namespace App\Http\Controllers;
 use App\Models\Wallet;
 use App\Models\BankDetail;
 use Illuminate\Http\Request;
-use Unicodeveloper\Paystack\Paystack;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class WalletController extends Controller
 {
-    protected $paystack;
-
-    public function __construct()
-    {
-        $this->paystack = new Paystack();
-    }
-
     public function generateTippingQrCode(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $wallet = $user->wallet;
+        if (!$wallet) {
+            // Create wallet if it doesn't exist
+            $wallet = $user->wallet()->create([
+                'balance' => 0,
+                'tipping_url' => config('app.url') . '/t/' . \Illuminate\Support\Str::random(32),
+            ]);
+        }
+
+        try {
+            $qrCode = QrCode::size(300)
+                ->format('png')
+                ->errorCorrection('M')
+                ->margin(1)
+                ->generate($wallet->tipping_url);
+
+            $qrCodeBase64 = base64_encode($qrCode);
+
+            return response()->json([
+                'message' => 'QR code generated successfully',
+                'tipping_url' => $wallet->tipping_url,
+                'qr_code' => 'data:image/png;base64,' . $qrCodeBase64,
+                'user_name' => $user->name,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('QR code generation failed: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to generate QR code'
+            ], 500);
+        }
+    }
+
+    public function getWalletStats(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user || !$user->wallet) {
+            return response()->json(['message' => 'Wallet not found'], 404);
+        }
+
+        $wallet = $user->wallet;
+
+        // Calculate statistics
+        $totalTips = $wallet->transactions()
+            ->where('type', 'tip')
+            ->where('status', 'completed')
+            ->sum('amount');
+
+        $totalWithdrawals = $wallet->transactions()
+            ->where('type', 'withdrawal')
+            ->sum('amount');
+
+        $pendingWithdrawals = $wallet->transactions()
+            ->where('type', 'withdrawal')
+            ->where('status', 'pending')
+            ->sum('amount');
+
+        $thisMonthTips = $wallet->transactions()
+            ->where('type', 'tip')
+            ->where('status', 'completed')
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->sum('amount');
+
+        return response()->json([
+            'balance' => $wallet->balance,
+            'total_tips' => $totalTips,
+            'total_withdrawals' => $totalWithdrawals,
+            'pending_withdrawals' => $pendingWithdrawals,
+            'this_month_tips' => $thisMonthTips,
+            'total_transactions' => $wallet->transactions()->count(),
+        ]);
+    }
+
+    public function withdraw(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:1000',
+            'account_number' => 'required|string|min:10|max:10',
+            'bank_code' => 'required|string',
+        ]);
+
+        $user = Auth::user();
         if (!$user) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
@@ -28,36 +108,17 @@ class WalletController extends Controller
             return response()->json(['message' => 'Wallet not found'], 404);
         }
 
-        $qrCode = QrCode::size(200)->format('png')->generate($wallet->tipping_url);
-        $qrCodeBase64 = base64_encode($qrCode);
-
-        return response()->json([
-            'message' => 'QR code generated',
-            'tipping_url' => $wallet->tipping_url,
-            'qr_code' => 'data:image/png;base64,' . $qrCodeBase64,
-        ]);
-    }
-
-    public function withdraw(Request $request)
-    {
-        $request->validate([
-            'amount' => 'required|numeric|min:1000',
-            'account_number' => 'required|string',
-            'bank_code' => 'required|string',
-        ]);
-
-        $user = auth()->user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
-
-        $wallet = $user->wallet;
-        $total = $request->amount + 300;
+        $amount = $request->amount;
+        $fee = 300; // NGN 300 withdrawal fee
+        $total = $amount + $fee;
 
         if ($total > $wallet->balance) {
-            return response()->json(['message' => 'Insufficient balance'], 400);
+            return response()->json([
+                'message' => 'Insufficient balance. You need ₦' . number_format($total) . ' (including ₦300 fee)'
+            ], 400);
         }
 
+        // Update or create bank details
         BankDetail::updateOrCreate(
             ['user_id' => $user->id],
             [
@@ -69,13 +130,12 @@ class WalletController extends Controller
         );
 
         try {
-            $transfer = $this->paystack->transfer([
-                'amount' => $request->amount * 100,
-                'recipient' => $this->createRecipient($request->account_number, $request->bank_code),
-                'reason' => 'Wallet Withdrawal',
-            ]);
+            // For now, we'll create a withdrawal request that needs to be processed manually
+            // In a production environment, you would integrate with Paystack's Transfer API
+            // or use a different service for bank transfers
 
-            \App\Models\Transaction::create([
+            // Create transaction record
+            $transaction = \App\Models\Transaction::create([
                 'wallet_id' => $wallet->id,
                 'amount' => $total,
                 'type' => 'withdrawal',
@@ -83,33 +143,61 @@ class WalletController extends Controller
                 'qr_code_key' => \Illuminate\Support\Str::random(32),
             ]);
 
+            // Deduct from wallet balance
             $wallet->balance -= $total;
             $wallet->save();
 
-            return response()->json(['message' => 'Withdrawal initiated']);
+            // Log withdrawal request for manual processing
+            Log::info('Withdrawal request created', [
+                'user_id' => $user->id,
+                'transaction_id' => $transaction->id,
+                'amount' => $amount,
+                'fee' => $fee,
+                'total' => $total,
+                'account_number' => $request->account_number,
+                'bank_code' => $request->bank_code,
+            ]);
+
+            return response()->json([
+                'message' => 'Withdrawal request submitted successfully. You will receive payment within 24 hours.',
+                'transaction_id' => $transaction->id,
+                'amount' => $amount,
+                'fee' => $fee,
+                'total' => $total
+            ]);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Withdrawal failed: ' . $e->getMessage()], 400);
+            Log::error('Withdrawal failed: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Withdrawal failed: ' . $e->getMessage()
+            ], 400);
         }
     }
 
     public function getBanks()
     {
         try {
-            $banks = $this->paystack->getAllBanks();
-            return response()->json(['banks' => $banks['data']]);
+            $secretKey = config('services.paystack.secretKey');
+
+            // Make HTTP request with authorization header
+            $client = new \GuzzleHttp\Client();
+            $response = $client->request('GET', 'https://api.paystack.co/bank', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $secretKey,
+                    'Accept' => 'application/json',
+                ]
+            ]);
+
+            $banks = json_decode($response->getBody(), true);
+
+            if ($banks && isset($banks['data'])) {
+                return response()->json(['banks' => $banks['data']]);
+            } else {
+                Log::error('Invalid response format from Paystack API');
+                return response()->json(['message' => 'Failed to fetch banks'], 400);
+            }
         } catch (\Exception $e) {
+            Log::error('Failed to fetch banks: ' . $e->getMessage());
             return response()->json(['message' => 'Failed to fetch banks'], 400);
         }
-    }
-
-    protected function createRecipient($account_number, $bank_code)
-    {
-        $recipient = $this->paystack->createTransferRecipient([
-            'type' => 'nuban',
-            'account_number' => $account_number,
-            'bank_code' => $bank_code,
-            'currency' => 'NGN',
-        ]);
-        return $recipient['data']['recipient_code'];
     }
 }

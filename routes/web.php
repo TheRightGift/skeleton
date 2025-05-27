@@ -6,7 +6,7 @@ use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\DashboardController;
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('home');
 });
 
 Route::prefix(('auth'))->group(function () {

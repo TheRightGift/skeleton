@@ -47,30 +47,54 @@
         </div>
 
         <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                </svg>
+              </div>
+              <div class="ml-4">
+                <h3 class="text-sm font-medium text-gray-500">Total Tips Received</h3>
+                <p class="text-2xl font-bold text-gray-900">₦{{ formatMoney(totalTipsReceived) }}</p>
+              </div>
+            </div>
+            <button
+              @click="refreshBalance"
+              class="text-blue-600 hover:text-blue-800 focus:outline-none"
+              :class="{ 'animate-spin': refreshingBalance }"
+              :disabled="refreshingBalance"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
-            </div>
-            <div class="ml-4">
-              <h3 class="text-sm font-medium text-gray-500">Total Tips Received</h3>
-              <p class="text-2xl font-bold text-gray-900">₦{{ formatMoney(totalTipsReceived) }}</p>
-            </div>
+            </button>
           </div>
         </div>
 
         <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+              </div>
+              <div class="ml-4">
+                <h3 class="text-sm font-medium text-gray-500">Total Transactions</h3>
+                <p class="text-2xl font-bold text-gray-900">{{ transactions.length }}</p>
+              </div>
+            </div>
+            <button
+              @click="refreshBalance"
+              class="text-blue-600 hover:text-blue-800 focus:outline-none"
+              :class="{ 'animate-spin': refreshingBalance }"
+              :disabled="refreshingBalance"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
-            </div>
-            <div class="ml-4">
-              <h3 class="text-sm font-medium text-gray-500">Total Transactions</h3>
-              <p class="text-2xl font-bold text-gray-900">{{ transactions.length }}</p>
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -384,10 +408,18 @@ export default {
             try {
                 this.refreshingBalance = true;
                 const response = await axios.get('/api/wallet/refresh-balance');
+
+                // Update wallet balance
                 this.wallet.balance = response.data.balance;
-                this.showToast('Balance refreshed successfully', 'success');
+
+                // Update transactions if returned
+                if (response.data.transactions) {
+                    this.transactions = response.data.transactions;
+                }
+
+                this.showToast('Dashboard data refreshed successfully', 'success');
             } catch (error) {
-                this.showToast('Failed to refresh balance', 'error');
+                this.showToast('Failed to refresh data', 'error');
             } finally {
                 this.refreshingBalance = false;
             }

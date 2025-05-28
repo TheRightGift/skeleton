@@ -104,11 +104,22 @@ class WalletController extends Controller
             return response()->json(['message' => 'Wallet not found'], 404);
         }
 
-        // Return the current balance - this ensures we get the most up-to-date value from the database
+        // Calculate the total tips received
+        $totalTips = $wallet->transactions()
+            ->where('type', 'tip')
+            ->where('status', 'completed')
+            ->sum('amount');
+
+        // Get all transactions to return to frontend
+        $transactions = $wallet->transactions;
+
+        // Return the current balance and total tips - this ensures we get the most up-to-date values from the database
         // In a real-world application, this could also trigger verification of
         // pending transactions or check for incoming payments
         return response()->json([
             'balance' => $wallet->balance,
+            'total_tips' => $totalTips,
+            'transactions' => $transactions,
             'message' => 'Balance refreshed successfully'
         ]);
     }

@@ -134,6 +134,7 @@ class TipController extends Controller
                     'amount' => $amount,
                     'type' => 'tip',
                     'status' => 'completed',
+                    'qr_code_key' => $key,
                     'reference' => $request->reference,
                 ]);
 

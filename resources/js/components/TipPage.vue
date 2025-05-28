@@ -1,77 +1,97 @@
 <template>
-    <div class="max-w-4xl mx-auto px-4 py-6">
-        <div class="flex justify-center">
-            <div class="w-full md:w-2/3 lg:w-1/2">
-                <div class="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div class="p-6">
-                        <h2 class="text-2xl font-bold mb-4">Send a Tip to {{ user.name }}</h2>
-                        <p class="mb-1">Email: {{ user.email }}</p>
-                        <p class="mb-4">Tipping URL: {{ tipping_url }}</p>
+    <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div class="max-w-md mx-auto px-4 py-8">
+            <!-- Success/Error Messages -->
+            <div v-if="statusMessage" class="mb-4 p-4 rounded-lg" :class="{
+                'bg-green-100 text-green-800': statusType === 'success',
+                'bg-red-100 text-red-800': statusType === 'error'
+            }">
+                {{ statusMessage }}
+            </div>
 
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white text-center">
+                    <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"/>
+                            <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-2xl font-bold">Send a Tip</h1>
+                    <p class="text-blue-100 mt-1">to {{ user.name }}</p>
+                </div>
+
+                <!-- Form -->
+                <div class="p-6">
+                    <form @submit.prevent="initiateTip">
                         <div class="mb-4">
-                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Your Email</label>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-2">Your Email</label>
                             <input
                                 v-model="form.email"
                                 type="email"
                                 id="email"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                required
+                                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="your@email.com"
                             >
                         </div>
 
-                        <div class="mb-4">
-                            <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Tip Amount (₦)</label>
-                            <input
-                                v-model="form.amount"
-                                type="number"
-                                id="amount"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="account_number" class="block text-sm font-medium text-gray-700 mb-1">Account Number</label>
-                            <input
-                                v-model="form.account_number"
-                                type="text"
-                                id="account_number"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="bank_code" class="block text-sm font-medium text-gray-700 mb-1">Bank</label>
-                            <select
-                                v-model="form.bank_code"
-                                id="bank_code"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option v-for="bank in banks" :value="bank.code" :key="bank.code">{{ bank.name }}</option>
-                            </select>
+                        <div class="mb-6">
+                            <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">Tip Amount</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-3 text-gray-500 font-medium">₦</span>
+                                <input
+                                    v-model="form.amount"
+                                    type="number"
+                                    id="amount"
+                                    min="100"
+                                    step="50"
+                                    required
+                                    class="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="1000"
+                                >
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Minimum amount: ₦100</p>
                         </div>
 
                         <button
-                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                            @click="initiateTip"
+                            type="submit"
+                            :disabled="loading || !form.email || !form.amount || form.amount < 100"
+                            class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-400 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 transform hover:scale-[1.02] disabled:scale-100"
                         >
-                            Send Tip
+                            <span v-if="loading" class="flex items-center justify-center">
+                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Processing...
+                            </span>
+                            <span v-else>Pay with Paystack</span>
                         </button>
+                    </form>
 
-                        <div v-if="otpRequired" class="mt-4">
-                            <label for="otp" class="block text-sm font-medium text-gray-700 mb-1">Paystack OTP</label>
-                            <input
-                                v-model="form.otp"
-                                type="text"
-                                id="otp"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
-                            >
+                    <!-- Quick Amount Buttons -->
+                    <div class="mt-4">
+                        <p class="text-sm text-gray-600 mb-2">Quick amounts:</p>
+                        <div class="flex gap-2 flex-wrap">
                             <button
-                                class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-green-500 transition"
-                                @click="verifyOtp"
+                                v-for="quickAmount in quickAmounts"
+                                :key="quickAmount"
+                                @click="form.amount = quickAmount"
+                                class="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition"
                             >
-                                Verify OTP
+                                ₦{{ quickAmount.toLocaleString() }}
                             </button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="bg-gray-50 px-6 py-4 text-center">
+                    <p class="text-xs text-gray-500">
+                        Powered by <span class="font-semibold">Tippaz</span> & Paystack
+                    </p>
                 </div>
             </div>
         </div>
@@ -92,58 +112,70 @@ export default {
         return {
             form: {
                 email: '',
-                amount: 0,
-                account_number: '',
-                bank_code: '',
-                otp: '',
-                reference: ''
+                amount: null,
             },
-            banks: [],
-            otpRequired: false,
+            quickAmounts: [500, 1000, 2000, 5000, 10000],
+            loading: false,
+            statusMessage: '',
+            statusType: '', // 'success' or 'error'
         };
     },
     mounted() {
-        this.fetchBanks();
+        this.checkPaymentStatus();
     },
     methods: {
-        fetchBanks() {
-            axios.get('/api/banks').then(response => {
-                this.banks = response.data.banks;
-            }).catch(err => this.showToast('Failed to load banks'));
-        },
-        initiateTip() {
-            axios.post(`/api/tip/${this.keyering}`, {
-                email: this.form.email,
-                amount: this.form.amount,
-                account_number: this.form.account_number,
-                bank_code: this.form.bank_code,
-            }).then(response => {
-                if (response.data.message === 'OTP required') {
-                    this.form.reference = response.data.reference;
-                    this.otpRequired = true;
-                    this.showToast('Please enter the OTP sent by your bank');
-                } else {
-                    this.showToast('Tip sent successfully');
-                }
-            }).catch(err => this.showToast(err.response?.data?.message || 'Failed to initiate tip'));
-        },
-        verifyOtp() {
-            axios.post(`/api/tip/${this.keyering}/verify`, {
-                reference: this.form.reference,
-                otp: this.form.otp
-            }).then(() => {
-                this.showToast('Tip processed successfully');
-                this.otpRequired = false;
-                this.form = { email: '', amount: 0, account_number: '', bank_code: '', otp: '', reference: '' };
-            }).catch(err => this.showToast(err.response?.data?.message || 'OTP verification failed'));
-        },
-        showToast(message) {
-            // Implement a toast notification system compatible with your app
-            // For example, you could use a simple alert for now
-            alert(message);
+        checkPaymentStatus() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const paymentStatus = urlParams.get('payment');
 
-            // Or you could integrate a Tailwind-compatible toast library
-            // like toast from '@headlessui/vue' or create a custom toast component
+            if (paymentStatus === 'success') {
+                this.showMessage('Payment completed successfully! The tip has been sent.', 'success');
+            } else if (paymentStatus === 'failed') {
+                this.showMessage('Payment failed. Please try again.', 'error');
+            }
+        },
+        async initiateTip() {
+            if (!this.form.email || !this.form.amount || this.form.amount < 100) {
+                this.showMessage('Please fill in all required fields with valid values.', 'error');
+                return;
+            }
+
+            this.loading = true;
+            this.statusMessage = '';
+
+            try {
+                const response = await axios.post(`/api/tip/${this.keyering}`, {
+                    email: this.form.email,
+                    amount: this.form.amount,
+                });
+
+                if (response.data.authorization_url) {
+                    // Redirect to Paystack payment page
+                    window.location.href = response.data.authorization_url;
+                } else {
+                    this.showMessage('Failed to initialize payment. Please try again.', 'error');
+                }
+            } catch (error) {
+                console.error('Payment initialization error:', error);
+                this.showMessage(
+                    error.response?.data?.message || 'Failed to initialize payment. Please try again.',
+                    'error'
+                );
+            } finally {
+                this.loading = false;
+            }
+        },
+        showMessage(message, type) {
+            this.statusMessage = message;
+            this.statusType = type;
+
+            // Auto-hide success messages after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    this.statusMessage = '';
+                    this.statusType = '';
+                }, 5000);
+            }
         }
     }
 }

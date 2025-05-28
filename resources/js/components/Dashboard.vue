@@ -21,16 +21,28 @@
       <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div class="bg-white rounded-lg shadow p-6">
-          <div class="flex items-center">
-            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+              </div>
+              <div class="ml-4">
+                <h3 class="text-sm font-medium text-gray-500">Wallet Balance</h3>
+                <p class="text-2xl font-bold text-gray-900">₦{{ formatMoney(wallet.balance || 0) }}</p>
+              </div>
+            </div>
+            <button
+              @click="refreshBalance"
+              class="text-blue-600 hover:text-blue-800 focus:outline-none"
+              :class="{ 'animate-spin': refreshingBalance }"
+              :disabled="refreshingBalance"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
-            </div>
-            <div class="ml-4">
-              <h3 class="text-sm font-medium text-gray-500">Wallet Balance</h3>
-              <p class="text-2xl font-bold text-gray-900">₦{{ formatMoney(wallet.balance || 0) }}</p>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -314,6 +326,7 @@ export default {
             withdrawForm: { amount: '', account_number: '', bank_code: '' },
             banks: [],
             loading: false,
+            refreshingBalance: false,
             toast: {
                 show: false,
                 message: '',
@@ -364,6 +377,19 @@ export default {
                 this.banks = response.data.banks || [];
             } catch (error) {
                 this.showToast('Failed to load banks', 'error');
+            }
+        },
+
+        async refreshBalance() {
+            try {
+                this.refreshingBalance = true;
+                const response = await axios.get('/api/wallet/refresh-balance');
+                this.wallet.balance = response.data.balance;
+                this.showToast('Balance refreshed successfully', 'success');
+            } catch (error) {
+                this.showToast('Failed to refresh balance', 'error');
+            } finally {
+                this.refreshingBalance = false;
             }
         },
 
@@ -523,5 +549,16 @@ export default {
 </script>
 
 <style scoped>
-/* Additional custom styles if needed */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 </style>

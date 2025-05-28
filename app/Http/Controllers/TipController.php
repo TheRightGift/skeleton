@@ -42,7 +42,7 @@ class TipController extends Controller
             $paymentData = [
                 'amount' => $request->amount * 100, // Convert to kobo
                 'email' => $request->email,
-                'type' => 'bank, ussd',
+                'channels' => ['bank', 'ussd', 'qr', 'mobile_money'],
                 'currency' => 'NGN',
                 'callback_url' => url('/t/' . $key . '/callback'),
                 'metadata' => [

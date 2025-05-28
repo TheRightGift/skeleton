@@ -92,6 +92,27 @@ class WalletController extends Controller
         ]);
     }
 
+    public function refreshBalance()
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $wallet = $user->wallet;
+        if (!$wallet) {
+            return response()->json(['message' => 'Wallet not found'], 404);
+        }
+
+        // Return the current balance - this ensures we get the most up-to-date value from the database
+        // In a real-world application, this could also trigger verification of
+        // pending transactions or check for incoming payments
+        return response()->json([
+            'balance' => $wallet->balance,
+            'message' => 'Balance refreshed successfully'
+        ]);
+    }
+
     public function withdraw(Request $request)
     {
         $request->validate([

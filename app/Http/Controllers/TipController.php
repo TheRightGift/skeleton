@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Wallet;
 use App\Models\User;
+use Illuminate\Container\Attributes\Log;
 use Illuminate\Http\Request;
 use Unicodeveloper\Paystack\Facades\Paystack;
 
@@ -10,7 +11,7 @@ class TipController extends Controller
 {
     public function showTippingPage($key)
     {
-        $wallet = Wallet::where('tipping_url', config('app.url') . '/t/' . $key)->first();
+        $wallet = Wallet::where('tipping_url', url('/t/' . $key))->first();
 
         if (!$wallet) {
             abort(404, 'Invalid tipping URL');
@@ -43,7 +44,7 @@ class TipController extends Controller
                 'email' => $request->email,
                 'type' => 'bank, ussd',
                 'currency' => 'NGN',
-                'callback_url' => config('app.url') . '/t/' . $key . '/callback',
+                'callback_url' => url('/t/' . $key . '/callback'),
                 'metadata' => [
                     'wallet_id' => $wallet->id,
                     'tipping_url' => $wallet->tipping_url,
@@ -90,7 +91,7 @@ class TipController extends Controller
         }
     }
 
-    public function verifyOtp(Request $request, $key)
+    public function verifyTrx(Request $request, $key)
     {
         $request->validate([
             'reference' => 'required|string',
@@ -115,7 +116,6 @@ class TipController extends Controller
             ]);
 
             $result = json_decode($response->getBody(), true);
-
             if ($result && isset($result['status']) && $result['status'] && $result['data']['status'] === 'success') {
                 $amount = $result['data']['amount'] / 100; // Convert from kobo
 
@@ -150,13 +150,15 @@ class TipController extends Controller
     public function handleCallback(Request $request, $key)
     {
         $reference = $request->query('reference');
-        $status = $request->query('status');
-
-        if ($status === 'success' && $reference) {
+        \Illuminate\Support\Facades\Log::info('Paystack callback received', [
+            'reference' => $reference,
+            'key' => $key
+        ]);
+        if ($reference) {
             // Verify the payment in the background
             try {
                 $verificationRequest = new Request(['reference' => $reference]);
-                $this->verifyOtp($verificationRequest, $key);
+                $this->verifyTrx($verificationRequest, $key);
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::error('Callback verification error: ' . $e->getMessage());
                 return redirect('/t/' . $key . '?payment=failed');

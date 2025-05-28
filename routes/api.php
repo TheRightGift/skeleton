@@ -6,6 +6,27 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\TipController;
 
+// Public API endpoints
+Route::get('/status', function() {
+    return response()->json([
+        'status' => 'ok', 
+        'message' => 'API is working!',
+        'timestamp' => now()->toDateTimeString(),
+        'app_url' => config('app.url'),
+        'session_domain' => config('session.domain')
+    ]);
+});
+
+// Test auth endpoint - accessible with and without auth to test cookies
+Route::get('/auth-test', function() {
+    return response()->json([
+        'status' => 'ok',
+        'authenticated' => auth()->check(),
+        'user' => auth()->user(),
+        'message' => auth()->check() ? 'You are authenticated!' : 'Not authenticated'
+    ]);
+});
+
 // Route::post('/register', [AuthController::class, 'register']);
 
 Route::middleware('auth:sanctum')->group(function () {

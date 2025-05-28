@@ -127,12 +127,14 @@ export default {
         checkPaymentStatus() {
             const urlParams = new URLSearchParams(window.location.search);
             const paymentStatus = urlParams.get('payment');
+            console.log('Payment status:', paymentStatus);
 
-            if (paymentStatus === 'success') {
-                this.showMessage('Payment completed successfully! The tip has been sent.', 'success');
-            } else if (paymentStatus === 'failed') {
-                this.showMessage('Payment failed. Please try again.', 'error');
-            }
+
+            // if (paymentStatus === 'success') {
+            //     this.showMessage('Payment completed successfully! The tip has been sent.', 'success');
+            // } else if (paymentStatus === 'failed') {
+            //     this.showMessage('Payment failed. Please try again.', 'error');
+            // }
         },
         async initiateTip() {
             if (!this.form.email || !this.form.amount || this.form.amount < 100) {

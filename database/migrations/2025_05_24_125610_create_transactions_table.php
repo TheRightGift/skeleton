@@ -13,6 +13,8 @@ class CreateTransactionsTable extends Migration
             $table->decimal('amount', 10, 2);
             $table->string('type');
             $table->string('status');
+            $table->string('reference')->unique()->nullable();
+            $table->string('description')->nullable();
             $table->string('qr_code_key');
             $table->timestamps();
         });

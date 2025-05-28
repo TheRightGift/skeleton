@@ -9,17 +9,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run()
     {
-        $user = User::create([
-            'name' => 'Gozie Chukwu',
-            'email' => 'goziechukwu@gmail.com',
-            'phone' => '+2349012345678',
-            'password' => \Illuminate\Support\Facades\Hash::make('password'),
-        ]);
+        // Call the TestUserSeeder to create a test user and wallet
+        $this->call(TestUserSeeder::class);
 
-        Wallet::create([
-            'user_id' => $user->id,
-            'balance' => 10000.00,
-            'tipping_url' => config('app.url') . '/t/' . \Illuminate\Support\Str::random(32),
-        ]);
+        // You can add more seeders here if needed
+        // $this->call(AnotherSeeder::class);
     }
 }

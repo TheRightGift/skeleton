@@ -20,7 +20,7 @@ class TipController extends Controller
 
         return view('tip', [
             'user' => $user,
-            'tipping_url' => $wallet->tipping_url,
+            'tipping_url' => url($wallet->tipping_url),
             'key' => $key,
         ]);
     }
@@ -41,6 +41,7 @@ class TipController extends Controller
             $paymentData = [
                 'amount' => $request->amount * 100, // Convert to kobo
                 'email' => $request->email,
+                'type' => 'bank, ussd',
                 'currency' => 'NGN',
                 'callback_url' => config('app.url') . '/t/' . $key . '/callback',
                 'metadata' => [
@@ -58,7 +59,7 @@ class TipController extends Controller
             ];
 
             // Use direct API call matching the docs example
-            $secretKey = env('PAYSTACK_SECRET_KEY');
+            $secretKey = config('services.paystack.secret');
 
             $client = new \GuzzleHttp\Client();
             $response = $client->request('POST', 'https://api.paystack.co/transaction/initialize', [
@@ -102,7 +103,7 @@ class TipController extends Controller
 
         try {
             // Verify the payment using Paystack API
-            $secretKey = env('PAYSTACK_SECRET_KEY');
+            $secretKey = config('services.paystack.secret');
             $client = new \GuzzleHttp\Client();
 
             $response = $client->request('GET', 'https://api.paystack.co/transaction/verify/' . $request->reference, [
@@ -173,7 +174,7 @@ class TipController extends Controller
     {
         // Verify webhook signature (recommended for production)
         $signature = $request->header('x-paystack-signature');
-        $webhookSecret = env('PAYSTACK_WEBHOOK_SECRET');
+        $webhookSecret = config('services.paystack.webhook_secret');
 
         if ($webhookSecret && $signature) {
             $computedSignature = hash_hmac('sha512', $request->getContent(), $webhookSecret);

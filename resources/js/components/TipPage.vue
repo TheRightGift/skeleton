@@ -114,7 +114,7 @@ export default {
                 email: '',
                 amount: null,
             },
-            quickAmounts: [500, 1000, 2000, 5000, 10000],
+            quickAmounts: [100, 500, 1000, 2000, 5000, 10000],
             loading: false,
             statusMessage: '',
             statusType: '', // 'success' or 'error'

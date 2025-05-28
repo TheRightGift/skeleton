@@ -27,18 +27,20 @@ class WalletController extends Controller
         }
 
         try {
+            // Use SVG format which doesn't require Imagick extension
             $qrCode = QrCode::size(300)
-                ->format('png')
+                ->format('svg')
                 ->errorCorrection('M')
                 ->margin(1)
                 ->generate($wallet->tipping_url);
 
+            // For SVG, we don't need to base64 encode, but we'll do it anyway for consistency
             $qrCodeBase64 = base64_encode($qrCode);
 
             return response()->json([
                 'message' => 'QR code generated successfully',
                 'tipping_url' => $wallet->tipping_url,
-                'qr_code' => 'data:image/png;base64,' . $qrCodeBase64,
+                'qr_code' => 'data:image/svg+xml;base64,' . $qrCodeBase64,
                 'user_name' => $user->name,
             ]);
         } catch (\Exception $e) {
@@ -176,7 +178,7 @@ class WalletController extends Controller
     public function getBanks()
     {
         try {
-            $secretKey = config('services.paystack.secretKey');
+            $secretKey = config('services.paystack.secret');
 
             // Make HTTP request with authorization header
             $client = new \GuzzleHttp\Client();

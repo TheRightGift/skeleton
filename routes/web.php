@@ -23,6 +23,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });
 
-// Tipping routes (public)
 Route::get('/t/{key}', [TipController::class, 'showTippingPage'])->name('tipping.page');
 Route::get('/t/{key}/callback', [TipController::class, 'handleCallback'])->name('tipping.callback');
+Route::post('/paystack/webhook', [TipController::class, 'webhook'])->name('paystack.webhook');

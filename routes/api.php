@@ -28,4 +28,3 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::post('/tip/{key}', [TipController::class, 'initiateTip']);
 Route::post('/tip/{key}/verify', [TipController::class, 'verifyOtp']);
-Route::post('/webhook/paystack', [TipController::class, 'webhook']);

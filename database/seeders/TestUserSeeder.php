@@ -17,8 +17,8 @@ class TestUserSeeder extends Seeder
         if (!$existingUser) {
             // Create test user
             $user = User::create([
-                'name' => 'John Doe',
-                'email' => 'john@example.com',
+                'name' => 'George Ibekie',
+                'email' => 'gibekie@gmail.com',
                 'password' => bcrypt('password123'),
                 'email_verified_at' => now(),
             ]);
@@ -27,7 +27,7 @@ class TestUserSeeder extends Seeder
             Wallet::create([
                 'user_id' => $user->id,
                 'balance' => 0,
-                'tipping_url' => url('/t/' . Str::random(32)),
+                'tipping_url' => config('app.url') . '/t/' . \Illuminate\Support\Str::random(32),
             ]);
 
             $this->command->info('Test user created successfully!');
@@ -37,7 +37,7 @@ class TestUserSeeder extends Seeder
                 Wallet::create([
                     'user_id' => $existingUser->id,
                     'balance' => 0,
-                    'tipping_url' => url('/t/' . Str::random(32)),
+                    'tipping_url' => config('app.url') . '/t/' . \Illuminate\Support\Str::random(32),
                 ]);
                 $this->command->info('Wallet created for existing test user.');
             } else {

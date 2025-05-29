@@ -429,6 +429,7 @@ export default {
             try {
                 const response = await axios.get('/api/wallet/qr-code');
                 this.tippingQrCode = response.data.qr_code;
+                this.wallet.tipping_url = response.data.tipping_url;
                 this.showToast('Tipping QR code generated successfully');
             } catch (error) {
                 this.showToast(error.response?.data?.message || 'Failed to generate QR code', 'error');

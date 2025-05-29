@@ -19,6 +19,42 @@ class WalletController extends Controller
 
         $wallet = $user->wallet;
         if (!$wallet) {
+            return response()->json(['message' => 'Wallet not found'], 404);
+        }
+
+        // Ensure the tipping URL is a valid, absolute URL
+        $tippingUrl = $wallet->tipping_url;
+        if (!filter_var($tippingUrl, FILTER_VALIDATE_URL)) {
+            $tippingUrl = config('app.url') . '/t/' . basename($tippingUrl);
+        }
+
+        try {
+            // Generate QR code as PNG with explicit URL encoding
+            $qrCode = QrCode::format('png')->size(300)->generate($tippingUrl);
+            $qrCodeBase64 = base64_encode($qrCode);
+
+            return response()->json([
+                'message' => 'QR code generated',
+                'tipping_url' => $tippingUrl,
+                'qr_code' => 'data:image/png;base64,' . $qrCodeBase64,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('QR code generation failed: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to generate QR code'
+            ], 500);
+        }
+    }
+
+    public function generateTippingQrCode1(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $wallet = $user->wallet;
+        if (!$wallet) {
             // Create wallet if it doesn't exist
             $wallet = $user->wallet()->create([
                 'balance' => 0,

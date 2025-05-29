@@ -75,7 +75,7 @@
 
         <div class="text-center">
           <p class="text-sm text-gray-600">
-            Test credentials: <strong>test@example.com</strong> / <strong>password123</strong>
+            Test credentials: <strong>gibekie@gmail.com</strong> / <strong>password123</strong>
           </p>
         </div>
       </form>
